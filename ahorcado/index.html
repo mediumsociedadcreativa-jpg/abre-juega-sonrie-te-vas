@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piensa antes que te alcance </title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .game-layout {
+      display: flex;
+      flex-direction: row;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      gap: 30px;
+      max-width: 800px;
+      width: 100%;
+    }
+
+    /* Lado Izquierdo: Dibujo */
+    .left-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 2px dashed #ccc;
+      padding-right: 20px;
+    }
+
+    svg {
+      width: 220px;
+      height: 260px;
+      stroke: #333;
+      stroke-width: 4;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    /* La horca siempre es visible */
+    .gallows { stroke: #555; }
+
+    /* Partes que se van revelando */
+    .draw-part { display: none; }
+    .draw-part.visible { display: block; }
+
+    /* Lado Derecho: Controles */
+    .right-panel {
+      flex: 1.3;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    #keyboard {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .key {
+      width: 38px;
+      height: 38px;
+      font-weight: bold;
+      border: 1px solid #bbb;
+      background: #f8f9fa;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .key:disabled {
+      background: #e0e0e0;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    #word-display {
+      font-size: 2.2rem;
+      letter-spacing: 8px;
+      text-align: center;
+      margin: 10px 0 5px 0;
+      font-weight: bold;
+    }
+
+    #hint-display {
+      text-align: center;
+      font-style: italic;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
+    #status-message {
+      text-align: center;
+      font-weight: bold;
+      min-height: 24px;
+      margin-bottom: 10px;
+    }
+
+    .btn-reset {
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @media (max-width: 650px) {
+      .game-layout { flex-direction: column; }
+      .left-panel { border-right: none; border-bottom: 2px dashed #ccc; padding-bottom: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-layout">
+  <!-- LADO IZQUIERDO: DIBUJO -->
+  <div class="left-panel">
+    <svg viewBox="0 0 200 260">
+      <!-- Horca visible desde el inicio -->
+      <g class="gallows">
+        <line x1="20" y1="230" x2="120" y2="230" /> <!-- Base horca -->
+        <line x1="50" y1="230" x2="50" y2="20" />   <!-- Poste vertical -->
+        <line x1="50" y1="20" x2="120" y2="20" />    <!-- Poste horizontal -->
+        <line x1="120" y1="20" x2="120" y2="40" />  <!-- Cuerda -->
+      </g>
+
+      <!-- Secuencia de 10 fallos -->
+      <circle id="part-1" class="draw-part" cx="120" cy="60" r="20" />                      <!-- 1. Cabeza -->
+      <line id="part-2" class="draw-part" x1="120" y1="80" x2="120" y2="95" />               <!-- 2. Cuello -->
+      <line id="part-3" class="draw-part" x1="120" y1="90" x2="145" y2="110" />              <!-- 3. Brazo derecho -->
+      <line id="part-4" class="draw-part" x1="120" y1="90" x2="95" y2="110" />               <!-- 4. Brazo izquierdo -->
+      <line id="part-5" class="draw-part" x1="120" y1="95" x2="120" y2="150" />              <!-- 5. Tronco -->
+      <line id="part-6" class="draw-part" x1="120" y1="150" x2="95" y2="190" />              <!-- 6. Pierna izquierda -->
+      <line id="part-7" class="draw-part" x1="120" y1="150" x2="145" y2="190" />             <!-- 7. Pierna derecha -->
+      <line id="part-8" class="draw-part" x1="100" y1="220" x2="140" y2="200" stroke="#8B4513" /> <!-- 8. Tronco leña 1 -->
+      <line id="part-9" class="draw-part" x1="100" y1="200" x2="140" y2="220" stroke="#8B4513" /> <!-- 9. Tronco leña 2 (Cruz) -->
+      
+     <!-- 10. ¡Fuego total y rayones crueles! 🔥 -->
+     <g id="part-10" class="draw-part">
+     <!-- Llamas gigantes -->
+     <path d="M 30 230 Q 50 120 70 180 Q 90 80 110 160 Q 130 90 150 180 Q 170 110 180 230 Z" fill="#ff4500" opacity="0.8" />
+     <path d="M 50 230 Q 70 140 90 190 Q 110 110 125 180 Q 140 130 160 230 Z" fill="#ffcc00" opacity="0.9" />
+  
+     <!-- Rayones negros estilo pluma/cuaderno encima del monito -->
+     <path d="M 80 50 L 160 190 M 150 50 L 70 190 M 60 120 L 180 110 M 70 80 L 170 160" stroke="#111" stroke-width="5" />
+    </g>
+    </svg>
+    <p>Fallos: <span id="fail-count">0</span> / 10</p>
+  </div>
+
+  <!-- LADO DERECHO: ESTRUCTURA SOLICITADA -->
+  <div class="right-panel">
+    <!-- 1. Teclado arriba -->
+    <div id="keyboard"></div>
+
+    <!-- 2. Palabra en medio -->
+    <div id="word-display">_ _ _ _</div>
+
+    <!-- 3. Tip / Pista abajo de la palabra -->
+    <div id="hint-display">Pista: ...</div>
+
+    <div id="status-message"></div>
+    <button class="btn-reset" onclick="initGame()">NUEVA PARTIDA</button>
+  </div>
+</div>
+
+<script>
+  const dictionary = [
+    { word: "CUADERNO", hint: "Donde tu mamá se entera que hiciste en la escuela" },
+    { word: "MAESTRO", hint: "El que te pone X por no saber la respuesta" },
+    { word: "RECREO", hint: "El mejor momento del día escolar" },
+    { word: "AMIGO", hint: "Con quien haces planes para jugar" },
+    { word: "LAPIZ", hint: "Se le rompe la punta" },
+    { word: "ARCOIRIS", hint: "Tiene siete colores" },
+    { word: "BANDERA", hint: "Tiene tres colores" },
+    { word: "MASTIL", hint: "Es muy alto y vertical, parece tocar el cielo" },
+    { word: "HOGUERA", hint: "Donde termina el monito al décimo fallo" }
+  ];
+
+  let selectedItem = {};
+  let guessedLetters = [];
+  let mistakes = 0;
+  const maxMistakes = 10;
+
+  function initGame() {
+    selectedItem = dictionary[Math.floor(Math.random() * dictionary.length)];
+    guessedLetters = [];
+    mistakes = 0;
+
+    document.getElementById("fail-count").textContent = mistakes;
+    document.getElementById("status-message").textContent = "";
+    document.getElementById("hint-display").textContent = `Pista: ${selectedItem.hint}`;
+
+    for (let i = 1; i <= maxMistakes; i++) {
+      document.getElementById(`part-${i}`).classList.remove("visible");
+    }
+
+    updateWordDisplay();
+    createKeyboard();
+  }
+
+  function updateWordDisplay() {
+    const display = selectedItem.word
+      .split("")
+      .map(letter => (guessedLetters.includes(letter) ? letter : "_"))
+      .join(" ");
+    
+    document.getElementById("word-display").textContent = display;
+
+    if (!display.includes("_")) {
+      document.getElementById("status-message").textContent = "¡Te salvaste de la 🔥 hoguera! 🎉";
+      document.getElementById("status-message").style.color = "green";
+      disableKeyboard();
+    }
+  }
+
+  function createKeyboard() {
+    const keyboardContainer = document.getElementById("keyboard");
+    keyboardContainer.innerHTML = "";
+    const letters = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
+
+    letters.forEach(letter => {
+      const btn = document.createElement("button");
+      btn.textContent = letter;
+      btn.classList.add("key");
+      btn.onclick = () => handleGuess(letter, btn);
+      keyboardContainer.appendChild(btn);
+    });
+  }
+
+  function handleGuess(letter, button) {
+    button.disabled = true;
+    guessedLetters.push(letter);
+
+    if (selectedItem.word.includes(letter)) {
+      updateWordDisplay();
+    } else {
+      mistakes++;
+      document.getElementById("fail-count").textContent = mistakes;
+      document.getElementById(`part-${mistakes}`).classList.add("visible");
+
+      if (mistakes === maxMistakes) {
+        document.getElementById("status-message").textContent = `¡Se prendió la hoguera! 💥 La palabra era: ${selectedItem.word}`;
+        document.getElementById("status-message").style.color = "red";
+        disableKeyboard();
+      }
+    }
+  }
+
+  function disableKeyboard() {
+    const buttons = document.querySelectorAll(".key");
+    buttons.forEach(btn => btn.disabled = true);
+  }
+
+  initGame();
+</script>
+
+</body>
+</html>
