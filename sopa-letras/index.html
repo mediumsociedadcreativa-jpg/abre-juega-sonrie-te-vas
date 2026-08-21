@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sopa de Letras Desafía tu concentración </title>
+  <style>
+    :root {
+      --primary-color: #3b82f6;
+      --success-color: #16a34a;
+      --bg-color: #ffffff;
+      --text-color: #1f2937;
+      --grid-border: #e5e7eb;
+      --cell-bg: #f9fafb;
+      --cell-hover: #e0e7ff;
+      --cell-selected: #93c5fd;
+      --cell-found: #bbf7d0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      color: var(--text-color);
+    }
+
+    /* Formulario para cambiar palabras */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .controls label {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+
+    /* Lista de palabras a buscar */
+    .words-container {
+      background-color: var(--cell-bg);
+      border: 1px solid var(--grid-border);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+    }
+
+    .words-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .words-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      list-style: none;
+    }
+
+    .word-item {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      letter-spacing: 0.05em;
+    }
+
+    .word-item.found {
+      color: var(--success-color);
+      text-decoration: line-through;
+      opacity: 0.8;
+    }
+
+    .check-mark {
+      color: var(--success-color);
+      font-weight: bold;
+    }
+
+    /* Tablero de 15x15 Adaptable */
+    .grid-container {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      grid-template-rows: repeat(15, 1fr);
+      gap: 2px;
+      background-color: var(--grid-border);
+      border: 2px solid var(--grid-border);
+      border-radius: 0.375rem;
+      user-select: none;
+      touch-action: none;
+    }
+
+  .cell {
+    background-color: var(--cell-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(0.7rem, 2.8vw, 1.2rem); /* Ligera reducción de tamaño para acomodar acentos */
+    cursor: pointer;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+    .cell:hover {
+      background-color: var(--cell-hover);
+    }
+
+    .cell.selected {
+      background-color: var(--cell-selected);
+    }
+
+    .cell.found {
+      background-color: var(--cell-found);
+      color: #14532d;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Sopa de Letras</h1>
+
+    <!-- Control de Palabras -->
+    <div class="controls">
+      <label for="words-input">Palabras a buscar (separadas por coma):</label>
+      <div class="input-group">
+        <input type="text" id="words-input" value="SOPA, LETRAS, ENCUENTRA, DESAFÍA, CONCENTRACIÓN, LÓGICA, VISUAL" />
+        <button id="btn-update">Generar</button>
+      </div>
+    </div>
+
+    <!-- Lista Superior de Palabras -->
+    <div class="words-container">
+      <div class="words-title">Palabras por encontrar:</div>
+      <ul class="words-list" id="words-list"></ul>
+    </div>
+
+    <!-- Tablero de Juego -->
+    <div class="grid-container" id="grid"></div>
+  </div>
+
+  <script>
+  const GRID_SIZE = 15;
+  let targetWords = [];
+  let foundWords = new Set();
+  let gridMatrix = [];
+  let placedWordLocations = {}; // { PALABRA: [{r, c}, ...] }
+
+  // Estado para la selección mediante arrastre (Mouse / Touch)
+  let isSelecting = false;
+  let startCell = null;
+  let currentEndCell = null;
+  let selectedCells = [];
+
+  // Elementos del DOM
+  const gridEl = document.getElementById('grid');
+  const wordsListEl = document.getElementById('words-list');
+  const wordsInput = document.getElementById('words-input');
+  const btnUpdate = document.getElementById('btn-update');
+
+  // Inicializar juego
+function removeAccents(str) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function initGame() {
+  const rawInput = wordsInput.value.toUpperCase();
+  
+  targetWords = Array.from(new Set(
+    rawInput.split(',')
+      .map(w => w.trim().replace(/[^A-ZÑÁÉÍÓÚÜ]/g, '')) // Conserva A-Z, Ñ y vocales con acento/diéresis
+      .filter(w => w.length >= 2 && w.length <= GRID_SIZE)
+  ));
+
+  if (targetWords.length === 0) {
+    alert('Ingresa al menos una palabra válida (de 2 a 15 letras).');
+    return;
+  }
+
+  foundWords.clear();
+  resetSelection();
+  placedWordLocations = {};
+
+  generateGrid();
+  renderWordsList();
+  renderGrid();
+}
+
+  function resetSelection() {
+    isSelecting = false;
+    startCell = null;
+    currentEndCell = null;
+    selectedCells = [];
+  }
+
+  // Generar Matriz vacía, colocar palabras y rellenar aleatoriamente
+  function generateGrid() {
+    gridMatrix = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(''));
+
+    const directions = [
+      [0, 1],   // Horizontal
+      [1, 0],   // Vertical
+      [1, 1],   // Diagonal Abajo-Derecha
+      [-1, 1]   // Diagonal Arriba-Derecha
+    ];
+
+    targetWords.forEach(word => {
+      let placed = false;
+      let attempts = 0;
+
+      while (!placed && attempts < 100) {
+        attempts++;
+        const dir = directions[Math.floor(Math.random() * directions.length)];
+        const row = Math.floor(Math.random() * GRID_SIZE);
+        const col = Math.floor(Math.random() * GRID_SIZE);
+
+        if (canPlaceWord(word, row, col, dir)) {
+          const coords = [];
+          for (let i = 0; i < word.length; i++) {
+            const r = row + i * dir[0];
+            const c = col + i * dir[1];
+            gridMatrix[r][c] = word[i];
+            coords.push({ r, c });
+          }
+          placedWordLocations[word] = coords;
+          placed = true;
+        }
+      }
+    });
+
+    const alphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (gridMatrix[r][c] === '') {
+          gridMatrix[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+      }
+    }
+  }
+
+  function canPlaceWord(word, r, c, [dr, dc]) {
+    for (let i = 0; i < word.length; i++) {
+      const nr = r + i * dr;
+      const nc = c + i * dc;
+
+      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return false;
+      if (gridMatrix[nr][nc] !== '' && gridMatrix[nr][nc] !== word[i]) return false;
+    }
+    return true;
+  }
+
+  // Renderizar Lista de Palabras arriba
+  function renderWordsList() {
+    wordsListEl.innerHTML = '';
+    targetWords.forEach(word => {
+      const li = document.createElement('li');
+      li.className = `word-item ${foundWords.has(word) ? 'found' : ''}`;
+      li.textContent = word;
+
+      if (foundWords.has(word)) {
+        const check = document.createElement('span');
+        check.className = 'check-mark';
+        check.textContent = ' ✓';
+        li.appendChild(check);
+      }
+
+      wordsListEl.appendChild(li);
+    });
+  }
+
+  // Renderizar Tablero HTML y asociar Eventos de Arrastre
+  function renderGrid() {
+    gridEl.innerHTML = '';
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        cell.textContent = gridMatrix[r][c];
+
+        // --- Eventos de Mouse ---
+        cell.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startSelection(r, c);
+        });
+
+        cell.addEventListener('mouseenter', () => {
+          if (isSelecting) {
+            updateSelection(r, c);
+          }
+        });
+
+        gridEl.appendChild(cell);
+      }
+    }
+    updateGridHighlights();
+  }
+
+  // Lógica de Inicio de Arrastre
+  function startSelection(r, c) {
+    isSelecting = true;
+    startCell = { r, c };
+    currentEndCell = { r, c };
+    selectedCells = [startCell];
+    updateGridHighlights();
+  }
+
+  // Lógica de Movimiento de Arrastre
+  function updateSelection(r, c) {
+    if (!startCell) return;
+    currentEndCell = { r, c };
+    
+    const line = getLineCells(startCell.r, startCell.c, r, c);
+    if (line.length > 0) {
+      selectedCells = line;
+    } else {
+      selectedCells = [startCell];
+    }
+    updateGridHighlights();
+  }
+
+  // Lógica de Finalización de Arrastre
+  function endSelection() {
+    if (!isSelecting) return;
+    
+    if (selectedCells.length > 1) {
+      checkSelection();
+    }
+    
+    resetSelection();
+    updateGridHighlights();
+  }
+
+  // --- Eventos de Pantalla Táctil (Touch) ---
+  gridEl.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Evita el scroll mientras se arrastra
+    const touch = e.touches[0];
+    const cell = getCellFromPoint(touch.clientX, touch.clientY);
+    if (cell) {
+      const r = parseInt(cell.dataset.row);
+      const c = parseInt(cell.dataset.col);
+      startSelection(r, c);
+    }
+  }, { passive: false });
+
+  gridEl.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isSelecting) return;
+    const touch = e.touches[0];
+    const cell = getCellFromPoint(touch.clientX, touch.clientY);
+    if (cell) {
+      const r = parseInt(cell.dataset.row);
+      const c = parseInt(cell.dataset.col);
+      updateSelection(r, c);
+    }
+  }, { passive: false });
+
+  gridEl.addEventListener('touchend', () => {
+    endSelection();
+  });
+
+  // Finalizar selección si se suelta el clic del mouse fuera del tablero
+  window.addEventListener('mouseup', () => {
+    endSelection();
+  });
+
+  // Identificar casilla basada en coordenadas x/y (para Touch)
+  function getCellFromPoint(x, y) {
+    const element = document.elementFromPoint(x, y);
+    if (element && element.classList.contains('cell')) {
+      return element;
+    }
+    return null;
+  }
+
+  // Calcular línea recta (horizontal, vertical o diagonal)
+  function getLineCells(r1, c1, r2, c2) {
+    const dr = r2 - r1;
+    const dc = c2 - c1;
+
+    const steps = Math.max(Math.abs(dr), Math.abs(dc));
+    if (steps === 0) return [{ r: r1, c: c1 }];
+
+    const stepR = dr / steps;
+    const stepC = dc / steps;
+
+    // Solo permite líneas perfectamente rectas
+    if (Math.abs(stepR) !== 0 && Math.abs(stepR) !== 1) return [];
+    if (Math.abs(stepC) !== 0 && Math.abs(stepC) !== 1) return [];
+
+    const line = [];
+    for (let i = 0; i <= steps; i++) {
+      line.push({
+        r: r1 + i * stepR,
+        c: c1 + i * stepC
+      });
+    }
+    return line;
+  }
+
+  // Comprobar coincidencia de palabra
+  function checkSelection() {
+    const selectedWord = selectedCells.map(cell => gridMatrix[cell.r][cell.c]).join('');
+    const reversedWord = selectedWord.split('').reverse().join('');
+
+    const matchedWord = targetWords.find(
+      w => !foundWords.has(w) && (w === selectedWord || w === reversedWord)
+    );
+
+    if (matchedWord) {
+      foundWords.add(matchedWord);
+      renderWordsList();
+
+      if (foundWords.size === targetWords.length) {
+        setTimeout(() => alert('¡Felicidades! Encontraste todas las palabras.'), 200);
+      }
+    }
+  }
+
+  // Actualizar estilos en el tablero
+  function updateGridHighlights() {
+    const cells = gridEl.children;
+
+    const foundCoords = new Set();
+    foundWords.forEach(word => {
+      if (placedWordLocations[word]) {
+        placedWordLocations[word].forEach(pos => foundCoords.add(`${pos.r},${pos.c}`));
+      }
+    });
+
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      const r = parseInt(cell.dataset.row);
+      const c = parseInt(cell.dataset.col);
+      const key = `${r},${c}`;
+
+      cell.className = 'cell';
+
+      if (foundCoords.has(key)) {
+        cell.classList.add('found');
+      }
+
+      if (selectedCells.some(pos => pos.r === r && pos.c === c)) {
+        cell.classList.add('selected');
+      }
+    }
+  }
+
+  btnUpdate.addEventListener('click', initGame);
+  initGame();
+</script>
+</body>
+</html>
