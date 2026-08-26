@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Café Cósmico - Oráculo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="contenedor-oraculo">
+    <div class="escenario-mazo">
+      <!-- Carta estática fija al fondo que siempre mantendrá la portada exacta -->
+      <div class="tarjeta-fondo">
+        <img src="imagenes/portada.webp" alt="Café Cósmico">
+      </div>
+
+      <!-- Tarjeta interactiva frontal -->
+      <div class="tarjeta-activa-container" id="tarjetaContainer">
+        <div class="tarjeta" id="tarjeta">
+          <div class="cara reverso">
+            <img src="imagenes/portada.webp" alt="Café Cósmico">
+          </div>
+          <div class="cara frente">
+            <img id="imagenOraculo" src="" alt="Frase del Oráculo">
+          </div>
+        </div>
+      </div>
+    </div>
+    <button id="btnBarajar"> 🌟 Siguiente carta ☄️</button>
+    <center>Permite que tu intuición seleccione la carta y voltéala con un clic. 💫</center>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
