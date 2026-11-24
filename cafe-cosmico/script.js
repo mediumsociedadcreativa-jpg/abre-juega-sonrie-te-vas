@@ -1,4 +1,4 @@
-const TOTAL_TARJETAS = 6; 
+const TOTAL_TARJETAS = 13; 
 const EXTENSION = 'webp'; 
 
 const tarjetaActiva = document.getElementById('tarjeta');
